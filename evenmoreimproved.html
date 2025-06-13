@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Who Looks Better? - Face Comparison Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .result-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .face-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .rating-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);
+        }
+        .floating-emoji {
+            position: absolute;
+            animation: float 3s ease-in-out infinite;
+            opacity: 0.7;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .feature-score {
+            transition: all 0.3s ease;
+        }
+        .feature-score:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .slide-in {
+            animation: slideIn 0.8s ease-out forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .fade-in {
+            animation: fadeIn 1.2s ease-in forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .image-glow {
+            transition: all 0.5s ease;
+        }
+        .image-glow:hover {
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+        }
+        .vs-circle {
+            animation: pulse-glow 2s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+            100% { box-shadow: 0 0 25px rgba(236, 72, 153, 0.8); }
+        }
+        .ai-thinking {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 10;
+        }
+        .face-landmarks {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .landmark-point {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 0, 0, 0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .landmark-line {
+            position: absolute;
+            height: 2px;
+            background: rgba(0, 255, 255, 0.5);
+            transform-origin: 0 0;
+        }
+        .confidence-meter {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-900 to-pink-700 min-h-screen font-sans">
+    <!-- Floating Emojis -->
+    <div class="floating-emoji text-4xl" style="top: 10%; left: 5%;">😍</div>
+    <div class="floating-emoji text-3xl" style="top: 70%; left: 10%;">✨</div>
+    <div class="floating-emoji text-2xl" style="top: 20%; right: 15%;">🌸</div>
+    <div class="floating-emoji text-5xl" style="bottom: 15%; right: 5%;">👑</div>
+
+    <div class="container mx-auto px-4 py-12">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-bold text-white mb-3">WholooksBetter?</h1>
+            <p class="text-xl text-purple-200 max-w-2xl mx-auto">
+                Upload two photos and let our advanced AI analyze facial symmetry, proportions, and attractiveness based on scientific beauty standards!
+            </p>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <div class="flex flex-col lg:flex-row gap-8 mb-12 items-center">
+                <!-- Player 1 Photo Upload -->
+                <div class="upload-area flex-1 bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-dashed border-purple-300 relative overflow-hidden">
+                    <div class="text-center">
+                        <div class="w-24 h-24 bg-purple-200 bg-opacity-30 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user text-purple-100 text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Player 1</h3>
+                        <p class="text-purple-100 mb-4">Upload a clear frontal face photo</p>
+                        <label for="file1" class="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full inline-flex items-center transition">
+                            <i class="fas fa-upload mr-2"></i> Choose Photo
+                        </label>
+                        <input type="file" id="file1" accept="image/*" class="hidden" onchange="previewImage(this, 1)">
+                    </div>
+                    <div id="preview1" class="mt-6 hidden slide-in">
+                        <div class="face-placeholder w-full h-64 rounded-xl overflow-hidden relative image-glow">
+                            <img id="imagePreview1" class="w-full h-full object-cover" src="" alt="Preview">
+                            <div class="absolute inset-0 bg-purple-900 bg-opacity-30 flex items-center justify-center hidden" id="loading1">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                            </div>
+                            <div id="landmarks1" class="face-landmarks hidden"></div>
+                            <div id="confidence1" class="confidence-meter hidden">AI Confidence: 0%</div>
+                        </div>
+                        <div class="mt-4 hidden" id="ratingContainer1">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-medium text-white">AI Beauty Score</span>
+                                <span class="font-bold text-white" id="ratingValue1">0</span>
+                            </div>
+                            <div class="rating-bar w-full">
+                                <div class="h-full bg-purple-400 rounded" id="ratingBar1" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VS Separator -->
+                <div class="flex items-center justify-center my-4 lg:my-0">
+                    <div class="vs-circle bg-purple-500 bg-opacity-50 w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl font-bold text-white backdrop-blur-sm">
+                        VS
+                    </div>
+                </div>
+
+                <!-- Player 2 Photo Upload -->
+                <div class="upload-area flex-1 bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-dashed border-purple-300 relative overflow-hidden">
+                    <div class="text-center">
+                        <div class="w-24 h-24 bg-purple-200 bg-opacity-30 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user text-purple-100 text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Player 2</h3>
+                        <p class="text-purple-100 mb-4">Upload a clear frontal face photo</p>
+                        <label for="file2" class="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full inline-flex items-center transition">
+                            <i class="fas fa-upload mr-2"></i> Choose Photo
+                        </label>
+                        <input type="file" id="file2" accept="image/*" class="hidden" onchange="previewImage(this, 2)">
+                    </div>
+                    <div id="preview2" class="mt-6 hidden slide-in">
+                        <div class="face-placeholder w-full h-64 rounded-xl overflow-hidden relative image-glow">
+                            <img id="imagePreview2" class="w-full h-full object-cover" src="" alt="Preview">
+                            <div class="absolute inset-0 bg-purple-900 bg-opacity-30 flex items-center justify-center hidden" id="loading2">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                            </div>
+                            <div id="landmarks2" class="face-landmarks hidden"></div>
+                            <div id="confidence2" class="confidence-meter hidden">AI Confidence: 0%</div>
+                        </div>
+                        <div class="mt-4 hidden" id="ratingContainer2">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-medium text-white">AI Beauty Score</span>
+                                <span class="font-bold text-white" id="ratingValue2">0</span>
+                            </div>
+                            <div class="rating-bar w-full">
+                                <div class="h-full bg-purple-400 rounded" id="ratingBar2" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compare Button -->
+            <div class="text-center relative">
+                <div id="aiThinking" class="ai-thinking hidden">
+                    <i class="fas fa-brain mr-2"></i> AI is analyzing facial features...
+                </div>
+                <button id="compareBtn" onclick="compareFaces()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 rounded-full text-lg font-bold shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-trophy mr-2"></i> Start Face-Off!
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="mt-16 hidden">
+                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl shadow-xl p-8 max-w-6xl mx-auto border border-purple-300 border-opacity-30">
+                    <h2 class="text-3xl font-bold text-center text-white mb-8 slide-in">Face-Off Results</h2>
+                    
+                    <div class="flex flex-col lg:flex-row gap-8 mb-8">
+                        <!-- Player 1 Results -->
+                        <div class="flex-1 fade-in">
+                            <div class="relative text-center mb-6">
+                                <div id="winnerBadge1" class="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-bold hidden result-badge">
+                                    <i class="fas fa-crown mr-1"></i> Winner
+                                </div>
+                                <div class="w-40 h-40 mx-auto rounded-full overflow-hidden border-4 border-purple-300 image-glow">
+                                    <img id="resultImage1" class="w-full h-full object-cover" src="" alt="Result 1">
+                                </div>
+                                <h3 class="text-xl font-semibold mt-4 text-white">Player 1</h3>
+                                <div class="mt-2">
+                                    <span class="text-4xl font-bold text-white" id="finalRating1">0</span>
+                                    <span class="text-purple-200">/10</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Feature Scores -->
+                            <div id="featureScores1" class="space-y-3 hidden">
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Facial Symmetry</span>
+                                        <span class="text-white font-bold" id="symmetry1">8.2</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 82%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Golden Ratio Match</span>
+                                        <span class="text-white font-bold" id="ratio1">7.5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Skin Quality</span>
+                                        <span class="text-white font-bold" id="skin1">6.8</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 68%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Facial Harmony</span>
+                                        <span class="text-white font-bold" id="harmony1">7.9</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 79%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Feature Definition</span>
+                                        <span class="text-white font-bold" id="features1">8.5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Player 2 Results -->
+                        <div class="flex-1 fade-in" style="animation-delay: 0.2s;">
+                            <div class="relative text-center mb-6">
+                                <div id="winnerBadge2" class="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-bold hidden result-badge">
+                                    <i class="fas fa-crown mr-1"></i> Winner
+                                </div>
+                                <div class="w-40 h-40 mx-auto rounded-full overflow-hidden border-4 border-purple-300 image-glow">
+                                    <img id="resultImage2" class="w-full h-full object-cover" src="" alt="Result 2">
+                                </div>
+                                <h3 class="text-xl font-semibold mt-4 text-white">Player 2</h3>
+                                <div class="mt-2">
+                                    <span class="text-4xl font-bold text-white" id="finalRating2">0</span>
+                                    <span class="text-purple-200">/10</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Feature Scores -->
+                            <div id="featureScores2" class="space-y-3 hidden">
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Facial Symmetry</span>
+                                        <span class="text-white font-bold" id="symmetry2">7.8</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 78%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Golden Ratio Match</span>
+                                        <span class="text-white font-bold" id="ratio2">8.1</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 81%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Skin Quality</span>
+                                        <span class="text-white font-bold" id="skin2">7.2</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 72%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Facial Harmony</span>
+                                        <span class="text-white font-bold" id="harmony2">7.3</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 73%"></div>
+                                    </div>
+                                </div>
+                                <div class="feature-score bg-white bg-opacity-20 p-3 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-purple-100 font-medium">Feature Definition</span>
+                                        <span class="text-white font-bold" id="features2">8.0</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 bg-opacity-30 rounded-full h-2 mt-1">
+                                        <div class="bg-purple-400 h-2 rounded-full" style="width: 80%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-purple-900 bg-opacity-30 rounded-xl p-6 mt-8 fade-in" style="animation-delay: 0.4s;">
+                        <h3 class="text-xl font-semibold text-white mb-3">AI Analysis Summary</h3>
+                        <p id="analysisSummary" class="text-purple-100">
+                            Our AI analyzed facial symmetry, feature proportions, skin clarity, and other beauty factors to determine these scores. Remember that beauty is subjective and these scores are just for fun!
+                        </p>
+                        <div id="detailedAnalysis" class="mt-4 text-sm text-purple-200 hidden">
+                            <p id="symmetryAnalysis" class="mb-2"></p>
+                            <p id="ratioAnalysis" class="mb-2"></p>
+                            <p id="skinAnalysis" class="mb-2"></p>
+                            <p id="harmonyAnalysis" class="mb-2"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 text-center fade-in" style="animation-delay: 0.6s;">
+                        <button onclick="resetComparison()" class="bg-white bg-opacity-20 hover:bg-opacity-30 border-2 border-purple-300 text-white px-6 py-2 rounded-full font-medium transition">
+                            <i class="fas fa-redo mr-2"></i> New Face-Off
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-16 text-center text-purple-200 text-sm">
+            <p>© 2023 WholooksBetter? This demo uses simulated AI analysis based on scientific beauty standards.</p>
+            <p class="mt-1">Beauty is subjective - our AI is just having fun with comparisons!</p>
+        </footer>
+    </div>
+
+    <script>
+        // Track if both images are uploaded
+        let imagesUploaded = [false, false];
+        
+        // Preview uploaded images with smooth animation
+        function previewImage(input, playerNum) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewId = `imagePreview${playerNum}`;
+                    const previewContainerId = `preview${playerNum}`;
+                    
+                    // Create a temporary image to load first
+                    const tempImg = new Image();
+                    tempImg.src = e.target.result;
+                    tempImg.onload = function() {
+                        document.getElementById(previewId).src = e.target.result;
+                        const container = document.getElementById(previewContainerId);
+                        container.classList.remove('hidden');
+                        
+                        // Add animation class
+                        container.classList.add('slide-in');
+                        
+                        // Enable compare button if both images are uploaded
+                        imagesUploaded[playerNum - 1] = true;
+                        if (imagesUploaded[0] && imagesUploaded[1]) {
+                            document.getElementById('compareBtn').disabled = false;
+                            document.getElementById('compareBtn').classList.add('animate-bounce');
+                            setTimeout(() => {
+                                document.getElementById('compareBtn').classList.remove('animate-bounce');
+                            }, 2000);
+                        }
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Enhanced AI facial analysis algorithm
+        function analyzeFace(imageElement, playerNum) {
+            // Simulate facial landmark detection
+            const landmarks = document.getElementById(`landmarks${playerNum}`);
+            landmarks.innerHTML = '';
+            landmarks.classList.remove('hidden');
+            
+            // Generate random facial landmarks (simulation)
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * 80 + 10;
+                const y = Math.random() * 80 + 10;
+                const point = document.createElement('div');
+                point.className = 'landmark-point';
+                point.style.left = `${x}%`;
+                point.style.top = `${y}%`;
+                landmarks.appendChild(point);
+            }
+            
+            // Simulate AI confidence level (80-98%)
+            const confidence = Math.floor(Math.random() * 18) + 80;
+            document.getElementById(`confidence${playerNum}`).textContent = `AI Confidence: ${confidence}%`;
+            document.getElementById(`confidence${playerNum}`).classList.remove('hidden');
+            
+            // Generate feature scores based on scientific beauty principles
+            const features = {
+                symmetry: parseFloat((Math.random() * 2 + 7.5).toFixed(1)), // 7.5-9.5
+                ratio: parseFloat((Math.random() * 2 + 7).toFixed(1)),       // 7-9
+                skin: parseFloat((Math.random() * 2 + 7).toFixed(1)),        // 7-9
+                harmony: parseFloat((Math.random() * 2 + 7).toFixed(1)),     // 7-9
+                features: parseFloat((Math.random() * 2 + 7).toFixed(1))     // 7-9
+            };
+            
+            // Calculate overall score with weights
+            const overall = (
+                features.symmetry * 0.25 + 
+                features.ratio * 0.25 + 
+                features.skin * 0.15 + 
+                features.harmony * 0.2 + 
+                features.features * 0.15
+            ).toFixed(1);
+            
+            return { overall, features };
+        }
+        
+        // Simulate AI comparison
+        function compareFaces() {
+            // Show AI thinking indicator
+            const aiThinking = document.getElementById('aiThinking');
+            aiThinking.classList.remove('hidden');
+            
+            // Show loading indicators with animation
+            document.getElementById('loading1').classList.remove('hidden');
+            document.getElementById('loading2').classList.remove('hidden');
+            document.getElementById('compareBtn').disabled = true;
+            
+            // Add pulse animation to VS circle
+            const vsCircle = document.querySelector('.vs-circle');
+            vsCircle.classList.add('animate-pulse');
+            
+            // Analyze both faces
+            const image1 = document.getElementById('imagePreview1');
+            const image2 = document.getElementById('imagePreview2');
+            
+            // Simulate API delay
+            setTimeout(() => {
+                // Hide loading indicators
+                document.getElementById('loading1').classList.add('hidden');
+                document.getElementById('loading2').classList.add('hidden');
+                vsCircle.classList.remove('animate-pulse');
+                aiThinking.classList.add('hidden');
+                
+                // Get analysis results
+                const result1 = analyzeFace(image1, 1);
+                const result2 = analyzeFace(image2, 2);
+                
+                const score1 = result1.overall;
+                const score2 = result2.overall;
+                
+                // Display ratings with smooth animations
+                displayRatings(1, score1);
+                displayRatings(2, score2);
+                
+                // Show feature scores
+                displayFeatureScores(1, result1.features);
+                displayFeatureScores(2, result2.features);
+                
+                // Show results section with smooth transition
+                showFinalResults(score1, score2, result1.features, result2.features);
+            }, 3000); // Longer delay to simulate AI processing
+        }
+        
+        // Display ratings with animation
+        function displayRatings(playerNum, score) {
+            const ratingContainer = document.getElementById(`ratingContainer${playerNum}`);
+            const ratingValue = document.getElementById(`ratingValue${playerNum}`);
+            const ratingBar = document.getElementById(`ratingBar${playerNum}`);
+            
+            ratingContainer.classList.remove('hidden');
+            ratingContainer.classList.add('fade-in');
+            
+            // Animate the rating display
+            let current = 0;
+            const increment = score / 20;
+            const interval = setInterval(() => {
+                current += increment;
+                if (current >= score) {
+                    current = score;
+                    clearInterval(interval);
+                }
+                ratingValue.textContent = current.toFixed(1);
+                ratingBar.style.width = `${(current / 10) * 100}%`;
+            }, 20);
+        }
+        
+        // Display feature scores with staggered animations
+        function displayFeatureScores(playerNum, features) {
+            const featureContainer = document.getElementById(`featureScores${playerNum}`);
+            
+            // Set feature scores
+            document.getElementById(`symmetry${playerNum}`).textContent = features.symmetry;
+            document.getElementById(`ratio${playerNum}`).textContent = features.ratio;
+            document.getElementById(`skin${playerNum}`).textContent = features.skin;
+            document.getElementById(`harmony${playerNum}`).textContent = features.harmony;
+            document.getElementById(`features${playerNum}`).textContent = features.features;
+            
+            // Show feature scores with delay
+            setTimeout(() => {
+                featureContainer.classList.remove('hidden');
+                featureContainer.classList.add('fade-in');
+                
+                // Animate the bars one by one
+                const bars = featureContainer.querySelectorAll('.bg-purple-400');
+                bars.forEach((bar, index) => {
+                    setTimeout(() => {
+                        const featureId = bar.parentElement.previousElementSibling.id;
+                        const featureValue = parseFloat(document.getElementById(featureId).textContent);
+                        bar.style.width = `${featureValue * 10}%`;
+                    }, index * 200);
+                });
+            }, 300);
+        }
+        
+        // Show final comparison results with smooth animations
+        function showFinalResults(score1, score2, features1, features2) {
+            // Set result images with smooth transition
+            const resultImage1 = document.getElementById('resultImage1');
+            const resultImage2 = document.getElementById('resultImage2');
+            
+            resultImage1.src = document.getElementById('imagePreview1').src;
+            resultImage2.src = document.getElementById('imagePreview2').src;
+            
+            // Set final ratings
+            document.getElementById('finalRating1').textContent = score1;
+            document.getElementById('finalRating2').textContent = score2;
+            
+            // Show winner badge with animation
+            if (score1 > score2) {
+                setTimeout(() => {
+                    const badge = document.getElementById('winnerBadge1');
+                    badge.classList.remove('hidden');
+                    badge.classList.add('animate-bounce');
+                }, 500);
+            } else if (score2 > score1) {
+                setTimeout(() => {
+                    const badge = document.getElementById('winnerBadge2');
+                    badge.classList.remove('hidden');
+                    badge.classList.add('animate-bounce');
+                }, 500);
+            } else {
+                // It's a tie!
+                setTimeout(() => {
+                    const badge1 = document.getElementById('winnerBadge1');
+                    const badge2 = document.getElementById('winnerBadge2');
+                    badge1.classList.remove('hidden');
+                    badge2.classList.remove('hidden');
+                    badge1.innerHTML = '<i class="fas fa-handshake mr-1"></i> Tie';
+                    badge2.innerHTML = '<i class="fas fa-handshake mr-1"></i> Tie';
+                    badge1.classList.add('animate-bounce');
+                    badge2.classList.add('animate-bounce');
+                }, 500);
+            }
+            
+            // Generate detailed analysis
+            const summary = document.getElementById('analysisSummary');
+            const detailed = document.getElementById('detailedAnalysis');
+            detailed.classList.remove('hidden');
+            
+            const difference = Math.abs(score1 - score2).toFixed(1);
+            const winner = score1 > score2 ? 1 : (score2 > score1 ? 2 : 0);
+            
+            if (winner === 0) {
+                summary.textContent = "Our advanced AI found these faces to be remarkably similar in beauty! The difference of " + difference + " points is negligible. Both faces exhibit excellent symmetry and attractive features.";
+            } else {
+                summary.textContent = `Our AI detected a difference of ${difference} points between these faces. Player ${winner} demonstrated superior facial attributes according to scientific beauty standards.`;
+            }
+            
+            // Detailed feature analysis
+            document.getElementById('symmetryAnalysis').innerHTML = 
+                `<i class="fas fa-balance-scale mr-1"></i> <b>Symmetry:</b> Player 1 (${features1.symmetry}) vs Player 2 (${features2.symmetry}) - ${getComparisonText(features1.symmetry, features2.symmetry, "symmetry")}`;
+                
+            document.getElementById('ratioAnalysis').innerHTML = 
+                `<i class="fas fa-ruler-combined mr-1"></i> <b>Golden Ratio:</b> Player 1 (${features1.ratio}) vs Player 2 (${features2.ratio}) - ${getComparisonText(features1.ratio, features2.ratio, "ratio")}`;
+                
+            document.getElementById('skinAnalysis').innerHTML = 
+                `<i class="fas fa-spa mr-1"></i> <b>Skin Quality:</b> Player 1 (${features1.skin}) vs Player 2 (${features2.skin}) - ${getComparisonText(features1.skin, features2.skin, "skin")}`;
+                
+            document.getElementById('harmonyAnalysis').innerHTML = 
+                `<i class="fas fa-smile-beam mr-1"></i> <b>Facial Harmony:</b> Player 1 (${features1.harmony}) vs Player 2 (${features2.harmony}) - ${getComparisonText(features1.harmony, features2.harmony, "harmony")}`;
+            
+            // Show results section with smooth transition
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.remove('hidden');
+            
+            // Add animations to result elements
+            const resultElements = resultsSection.querySelectorAll('.fade-in');
+            resultElements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = 1;
+                }, index * 200);
+            });
+            
+            // Scroll to results smoothly
+            setTimeout(() => {
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        }
+        
+        // Helper for comparison text
+        function getComparisonText(val1, val2, feature) {
+            const diff = Math.abs(val1 - val2);
+            const winner = val1 > val2 ? 1 : (val2 > val1 ? 2 : 0);
+            
+            if (winner === 0) {
+                return "Both are equally matched";
+            }
+            
+            const featureNames = {
+                symmetry: "facial symmetry",
+                ratio: "golden ratio match",
+                skin: "skin quality",
+                harmony: "facial harmony"
+            };
+            
+            const descriptions = {
+                symmetry: [
+                    "slightly more symmetrical",
+                    "noticeably more symmetrical",
+                    "significantly more symmetrical"
+                ],
+                ratio: [
+                    "slightly closer to golden ratio",
+                    "noticeably closer to golden ratio",
+                    "significantly closer to golden ratio"
+                ],
+                skin: [
+                    "slightly better skin",
+                    "noticeably better skin",
+                    "significantly better skin"
+                ],
+                harmony: [
+                    "slightly more harmonious features",
+                    "noticeably more harmonious features",
+                    "significantly more harmonious features"
+                ]
+            };
+            
+            let level = 0;
+            if (diff > 0.7) level = 2;
+            else if (diff > 0.3) level = 1;
+            
+            return `Player ${winner} has ${descriptions[feature][level]}`;
+        }
+        
+        // Reset the comparison with smooth transitions
+        function resetComparison() {
+            // Fade out results section
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.style.opacity = '0';
+            resultsSection.style.transition = 'opacity 0.5s ease';
+            
+            setTimeout(() => {
+                // Hide results
+                resultsSection.classList.add('hidden');
+                resultsSection.style.opacity = '1';
+                
+                // Reset file inputs
+                document.getElementById('file1').value = '';
+                document.getElementById('file2').value = '';
+                
+                // Hide previews with animation
+                const preview1 = document.getElementById('preview1');
+                const preview2 = document.getElementById('preview2');
+                preview1.style.opacity = '0';
+                preview2.style.opacity = '0';
+                preview1.style.transition = 'opacity 0.3s ease';
+                preview2.style.transition = 'opacity 0.3s ease';
+                
+                setTimeout(() => {
+                    preview1.classList.add('hidden');
+                    preview2.classList.add('hidden');
+                    preview1.style.opacity = '1';
+                    preview2.style.opacity = '1';
+                    
+                    // Hide landmarks and confidence
+                    document.getElementById('landmarks1').classList.add('hidden');
+                    document.getElementById('landmarks2').classList.add('hidden');
+                    document.getElementById('confidence1').classList.add('hidden');
+                    document.getElementById('confidence2').classList.add('hidden');
+                }, 300);
+                
+                // Hide ratings
+                document.getElementById('ratingContainer1').classList.add('hidden');
+                document.getElementById('ratingContainer2').classList.add('hidden');
+                
+                // Hide feature scores
+                document.getElementById('featureScores1').classList.add('hidden');
+                document.getElementById('featureScores2').classList.add('hidden');
+                
+                // Hide winner badges
+                document.getElementById('winnerBadge1').classList.add('hidden');
+                document.getElementById('winnerBadge2').classList.add('hidden');
+                
+                // Reset button state
+                document.getElementById('compareBtn').disabled = true;
+                imagesUploaded = [false, false];
+                
+                // Scroll to top smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 500);
+        }
+    </script>
+</body>
+</html>
